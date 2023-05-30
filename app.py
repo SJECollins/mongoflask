@@ -20,7 +20,7 @@ mongo = PyMongo(app)
 @app.route("/")
 @app.route("/get_tasks")
 def index():
-    tasks = mongo.db.tasks.find()
+    tasks = list(mongo.db.tasks.find())
     return render_template("tasks.html", tasks=tasks)
 
 
@@ -80,6 +80,27 @@ def signout():
     # session.clear() would clear all session cookies
     session.pop("user")
     return redirect(url_for("signin"))
+
+
+@app.route("/add_task", methods=["GET", "POST"])
+def add_task():
+    if request.method == "POST":
+        is_urgent = "on" if request.form.get("is_urgent") else "off"
+        task = {
+            "category_name": request.form.get("category_name"),
+            "task_name": request.form.get("task_name"),
+            "task_description": request.form.get("task_description"),
+            "is_urgent": is_urgent,
+            "due_date": request.form.get("due_date"),
+            "created_by": session["user"]
+        }
+        mongo.db.tasks.insert_one(task)
+        flash("Task added")
+        return redirect(url_for("index"))
+        # mongo.db.tasks.insert_one(request.form.to_dict())
+        # quickly insert by converting form to dict
+    categories = mongo.db.categories.find().sort("category_name", 1)
+    return render_template("add_task.html", categories=categories)
 
 
 if __name__ == "__main__":
